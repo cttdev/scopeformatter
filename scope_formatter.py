@@ -51,7 +51,7 @@ class App(QWidget):
         self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.canvas.setFocus()
 
-        props = dict(facecolor=canvas_series_color.value, alpha=0.1)
+        props = dict(facecolor=self.canvas_series_color.value, alpha=0.1)
         self.selector = RectangleSelector(self.canvas.axes, self.bounding_box_select,
                                        useblit=True,
                                        button=[1, 3],  # don't use middle button
