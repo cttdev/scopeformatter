@@ -1,83 +1,42 @@
-from matplotlib import pyplot as plt
-from matplotlib import transforms
+from datetime import datetime
+from enum import Enum
+
 import numpy as np
 
-class DraggableBoundingBox:
-    lock = None
-    def __init__(self, rectangle):
-        self.rectangle = rectangle
-        
-        self.xy = self.rectangle.get_xy()
-        self.width = self.rectangle.get_width()
-        self.height = self.rectangle.get_height()
 
-        self.dragging = None
-        self.connect()
+def process_raw_data_lines(data):
+        header_length = 5
 
-        self.press = None
+        class Columns(Enum):
+            date = 0
+            time = 1
+            voltage = 2
 
-    def connect(self):
-        self.cidpress = self.rectangle.figure.canvas.mpl_connect(
-            "button_press_event", self.on_press
-        )
-        # self.cidrelease = self.rectangle.figure.canvas.mpl_connect(
-        #     "button_release_event", self.on_release
-        # )
-        self.cidmotion = self.rectangle.figure.canvas.mpl_connect(
-            "motion_notify_event", self.on_motion
-        )
+        # Lambda to convert timestamp into datetime object.
+        str_to_date_time = lambda x: datetime.strptime(x, '%H:%M:%S.%f')
 
-    def disconnect(self):
-        self.rectangle.figure.canvas.mpl_disconnect(self.cidpress)
-        self.rectangle.figure.canvas.mpl_disconnect(self.cidrelease)
-        self.rectangle.figure.canvas.mpl_disconnect(self.cidmotion)
+        # Get the date and start time from the first line of the file.
+        date, start_time = np.genfromtxt(data[:header_length+1], dtype=None, skip_header=header_length, encoding="utf-8", usecols=[Columns.date.value, Columns.time.value], converters={Columns.time.value: str_to_date_time}).tolist()
 
-    def on_press(self, event):
-        if event.inaxes != self.rectangle.axes:
-            return
+        # Lambda to find delta between the timestamp datetime realtive to the start time in seconds.
+        str_to_delta_time = lambda x: (str_to_date_time(x) - start_time).microseconds * 1e-6
 
-        point_threshold = 0.1
-
-        xs, ys = self.get_corner_coords()
-        # Find nearest point to cursor
-        min_distance = float("inf")
-        for i, point in enumerate(zip(xs, ys)):
-            x, y = point
-            distance = np.sqrt((event.xdata - x) ** 2 + (event.ydata - y) ** 2)
-            if distance < min_distance:
-                min_distance = distance
-                closest_index = i
-
-        if event.button == 1:
-            if min_distance < point_threshold:
-                self.dragging = closest_index
-        
-        print(self.get_corner_coords())
-
-    def on_motion(self, event):
-        if self.dragging is None:
-            return
-
-        if event.inaxes != self.rectangle.axes:
-            return
-
-        self.transfrom_rectangle_coordinates(event.xdata, event.ydata)
-            
-
-        # self.xs[self.dragging] = self.xs[self.dragging] - event.xdata
-        # self.ys[self.dragging] = self.ys[self.dragging] - event.ydata
+        # Put the data to a numpy array.
+        return date, start_time, np.genfromtxt(data, skip_header=header_length, encoding="utf-8", usecols=[Columns.time.value, Columns.voltage.value], converters={Columns.time.value: str_to_delta_time})
 
 
+class DraculaColors(Enum):
+    background = "#282a36"	
+    current_line = "#44475a"	
+    foreground = "#f8f8f2"	
+    comment = "#6272a4"	
 
-        # self.line.set_data(self.xs, self.ys)
-        # self.line.figure.canvas.draw()
 
-        # if
-
-        # xdx = [i+dx for i,_ in self.geometry]
-        # ydy = [i+dy for _,i in self.geometry]
-
-        # self.geometry = [[x, y] for x, y in zip(xdx, ydy)]
-        # self.poly.set_xy(self.geometry)
-        self.rectangle.figure.canvas.draw()
-
+class DraculaAccents(Enum):
+    cyan = "#8be9fd"	
+    green = "#50fa7b"	
+    orange = "#ffb86c"	
+    pink = "#ff79c6"	
+    purple = "#bd93f9"	
+    red = "#ff5555"	
+    yellow = "#f1fa8c"

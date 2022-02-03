@@ -1,6 +1,5 @@
-from datetime import datetime
-from enum import Enum
 import os
+import random
 import sys
 from matplotlib.widgets import RectangleSelector
 import mplcursors
@@ -18,6 +17,8 @@ from PyQt5.QtWidgets import QApplication, QGroupBox, QHBoxLayout, QMessageBox, Q
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
+from helpers import DraculaAccents, DraculaColors, process_raw_data_lines
+
 class App(QWidget):
 
     def __init__(self):
@@ -33,28 +34,39 @@ class App(QWidget):
         self.zero_offset = False
         self.decimation = 1
 
+        # Styling
+        plt.style.use("./dracula.mplstyle")
+        self.canvas_series_color = random.choice(list(DraculaAccents))
+        self.processed_canvas_series_color = random.choice([i for i in list(DraculaAccents) if i != self.canvas_series_color])
+        selector_color = random.choice([i for i in list(DraculaAccents) if i not in [self.canvas_series_color, self.processed_canvas_series_color]])
+
         # Canvas and Toolbar
         self.figure = plt.figure()
         self.canvas = FigureCanvas(self.figure)
         self.canvas.axes = self.canvas.figure.add_subplot(111)
+        self.canvas.axes.grid(color=DraculaColors.current_line.value)
+        self.canvas.axes.set_axisbelow(True)
 
         self.toolbar = NavigationToolbar(self.canvas, self)
 
         self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.canvas.setFocus()
 
-        # props = dict(facecolor='blue', alpha=0.5)
+        props = dict(facecolor=selector_color.value, alpha=0.1)
         self.selector = RectangleSelector(self.canvas.axes, self.bounding_box_select,
                                        useblit=True,
                                        button=[1, 3],  # don't use middle button
                                        minspanx=0, minspany=0,
                                        spancoords='data',
                                        drag_from_anywhere=True,
-                                       interactive=True)
+                                       interactive=True,
+                                       props=props)
 
         self.processed_figure = plt.figure()
         self.processed_canvas = FigureCanvas(self.processed_figure)
         self.processed_canvas.axes = self.processed_canvas.figure.add_subplot(111)
+        self.processed_canvas.axes.grid(color=DraculaColors.current_line.value)
+        self.processed_canvas.axes.set_axisbelow(True)
 
         self.processed_toolbar = NavigationToolbar(self.processed_canvas, self)
 
@@ -140,7 +152,7 @@ class App(QWidget):
 
         try:
             lines = open(file_name).readlines()
-            self.date, self.start_time, self.data = self.process_raw_data_lines(lines)
+            self.date, self.start_time, self.data = process_raw_data_lines(lines)
             self.processed_data = self.data
             self.cropped_data = self.processed_data
             
@@ -172,13 +184,16 @@ class App(QWidget):
 
 
     def plotData(self):
-        self.canvas_series = self.canvas.axes.scatter(self.data[:, 0], self.data[:, 1])
-        self.processed_canvas_series = self.processed_canvas.axes.scatter(self.processed_data[:, 0], self.processed_data[:, 1])
+        self.canvas_series = self.canvas.axes.scatter(self.data[:, 0], self.data[:, 1], color=self.canvas_series_color.value)
+        self.canvas.axes.grid(color=DraculaColors.current_line.value)
+
+        self.processed_canvas_series = self.processed_canvas.axes.scatter(self.processed_data[:, 0], self.processed_data[:, 1], color=self.processed_canvas_series_color.value)
+        self.processed_canvas.axes.grid(color=DraculaColors.current_line.value)
 
         self.processed_canvas_xlim = self.processed_canvas.axes.get_xlim()
         self.processed_canvas_ylim = self.processed_canvas.axes.get_ylim()
 
-        self.processed_canvas_cursor = mplcursors.cursor(self.processed_canvas_series, hover=True)
+        self.add_processed_canvas_cursor()
 
         self.canvas.draw()
         self.processed_canvas.draw()
@@ -269,33 +284,20 @@ class App(QWidget):
             self.processed_canvas_series.remove()
             self.processed_canvas_cursor.remove()
 
-            self.processed_canvas_series = self.processed_canvas.axes.scatter(self.processed_data[:, 0], self.processed_data[:, 1])
-            self.processed_canvas_cursor = mplcursors.cursor(self.processed_canvas_series, hover=True)
+            self.processed_canvas_series = self.processed_canvas.axes.scatter(self.processed_data[:, 0], self.processed_data[:, 1], color=self.processed_canvas_series_color.value)
+            self.add_processed_canvas_cursor()
 
-        print(self.data)
+        self.processed_canvas.axes.grid(color=DraculaColors.current_line.value)
+
         self.processed_canvas.draw()
 
 
-    @staticmethod
-    def process_raw_data_lines(data):
-            header_length = 5
-
-            class Columns(Enum):
-                date = 0
-                time = 1
-                voltage = 2
-
-            # Lambda to convert timestamp into datetime object.
-            str_to_date_time = lambda x: datetime.strptime(x, '%H:%M:%S.%f')
-
-            # Get the date and start time from the first line of the file.
-            date, start_time = np.genfromtxt(data[:header_length+1], dtype=None, skip_header=header_length, encoding="utf-8", usecols=[Columns.date.value, Columns.time.value], converters={Columns.time.value: str_to_date_time}).tolist()
-
-            # Lambda to find delta between the timestamp datetime realtive to the start time in seconds.
-            str_to_delta_time = lambda x: (str_to_date_time(x) - start_time).microseconds * 1e-6
-
-            # Put the data to a numpy array.
-            return date, start_time, np.genfromtxt(data, skip_header=header_length, encoding="utf-8", usecols=[Columns.time.value, Columns.voltage.value], converters={Columns.time.value: str_to_delta_time})
+    def add_processed_canvas_cursor(self):
+        self.processed_canvas_cursor = mplcursors.cursor(self.processed_canvas_series, hover=True)
+        @self.processed_canvas_cursor.connect("add")
+        def _(sel):
+            sel.annotation.get_bbox_patch().set(fc=DraculaColors.foreground.value)
+            sel.annotation.arrow_patch.set(arrowstyle="simple", fc=DraculaColors.foreground.value, alpha=.75)
 
 
 if __name__ == '__main__':
