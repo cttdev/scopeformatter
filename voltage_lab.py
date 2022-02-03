@@ -19,8 +19,8 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 
 from helpers import DraculaAccents, DraculaColors, process_raw_data_lines
 
-class App(QWidget):
 
+class App(QWidget):
     def __init__(self):
         super().__init__()
         # Window
@@ -83,7 +83,7 @@ class App(QWidget):
         self.plot_button = QPushButton("Plot Data")
         self.plot_button.setEnabled(False)
         self.plot_button.clicked.connect(self.plotData)
-        
+
         self.zero_offset_button = QPushButton("Zero Offset")
         self.zero_offset_button.setCheckable(True)
         self.zero_offset_button.setChecked(self.zero_offset)
@@ -155,7 +155,7 @@ class App(QWidget):
             self.date, self.start_time, self.data = process_raw_data_lines(lines)
             self.processed_data = self.data
             self.cropped_data = self.processed_data
-            
+
             msg.setIcon(QMessageBox.Information)
             msg.setText("Successfully loaded {}.".format(os.path.basename(file_name)))
             msg.setWindowTitle("Success!")
@@ -214,9 +214,9 @@ class App(QWidget):
         else:
             if self.data.any():
                 croppped = np.where(
-                    (self.data[:, 0] >= extents[0]) & 
-                    (self.data[:, 0] <= extents[1]) & 
-                    (self.data[:, 1] >= extents[2]) & 
+                    (self.data[:, 0] >= extents[0]) &
+                    (self.data[:, 0] <= extents[1]) &
+                    (self.data[:, 1] >= extents[2]) &
                     (self.data[:, 1] <= extents[3])
                 )
 
@@ -269,15 +269,15 @@ class App(QWidget):
 
     def apply_modifiers_and_update_canvas(self):
         self.processed_data = self.cropped_data[::self.decimation].copy()
-        
+
         if self.zero_offset:
             min_value = min(self.data[:, 1])
-            
+
             self.processed_data[:, 1] = np.subtract(self.processed_data[:, 1], min_value)
             self.processed_canvas.axes.set_ylim(self.processed_canvas_ylim - min_value)
         else:
             self.processed_canvas.axes.set_ylim(self.processed_canvas_ylim)
-        
+
         self.processed_canvas.axes.set_xlim(self.processed_canvas_xlim)
 
         if self.processed_canvas_series is not None:

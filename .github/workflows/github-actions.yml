@@ -1,0 +1,49 @@
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+#  build_linux:
+#    runs-on: ubuntu-latest
+#    steps:
+#    - uses: actions/checkout@v2
+#    - name: Build Linux
+#      run: |
+#        python3 -m pip install --upgrade pip
+#        pip3 install -r requirements.txt
+#        pyinstaller -F -n=VoltageLabLinux --clean --additional-hooks-dir=. voltage_lab.py
+#    - name: Upload Artifact
+#      uses: actions/upload-artifact@v2
+#      with:
+#        name: VoltageLabLinux
+#        path: dist
+
+#  build_macos:
+#    runs-on: macos-latest
+#    steps:
+#    - uses: actions/checkout@v2
+#    - name: Build MacOS
+#      run: |
+#        python3 -m pip install --upgrade pip
+#        pip3 install -r requirements.txt
+#        pyinstaller -F -n=VoltageLabMacOS --clean --additional-hooks-dir=. voltage_lab.py
+#    - name: Upload Artifact
+#      uses: actions/upload-artifact@v2
+#      with:
+#        name: VoltageLabMacOS
+#        path: dist
+        
+  build_windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build Windows
+      run: |
+        python3 -m pip install --upgrade pip
+        pip3 install -r requirements.txt
+        pyinstaller -D -n=ScopeFromatterWindows --clean --add-data 'dracula.mplstyle;.' --additional-hooks-dir=. voltage_lab.py
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: ScopeFromatterWindows
+        path: dist
