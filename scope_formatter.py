@@ -38,7 +38,6 @@ class App(QWidget):
         plt.style.use("./dracula.mplstyle")
         self.canvas_series_color = random.choice(list(DraculaAccents))
         self.processed_canvas_series_color = random.choice([i for i in list(DraculaAccents) if i != self.canvas_series_color])
-        selector_color = random.choice([i for i in list(DraculaAccents) if i not in [self.canvas_series_color, self.processed_canvas_series_color]])
 
         # Canvas and Toolbar
         self.figure = plt.figure()
@@ -52,7 +51,7 @@ class App(QWidget):
         self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.canvas.setFocus()
 
-        props = dict(facecolor=selector_color.value, alpha=0.1)
+        props = dict(facecolor=canvas_series_color.value, alpha=0.1)
         self.selector = RectangleSelector(self.canvas.axes, self.bounding_box_select,
                                        useblit=True,
                                        button=[1, 3],  # don't use middle button
