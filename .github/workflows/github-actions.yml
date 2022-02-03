@@ -41,7 +41,7 @@ jobs:
       run: |
         python3 -m pip install --upgrade pip
         pip3 install -r requirements.txt
-        pyinstaller -D -n=ScopeFromatterWindows --clean --add-data 'dracula.mplstyle;.' --additional-hooks-dir=. voltage_lab.py
+        pyinstaller -D -n=ScopeFromatterWindows --clean --add-data 'dracula.mplstyle;.' --additional-hooks-dir=. scope_formatter.py
     - name: Upload Artifact
       uses: actions/upload-artifact@v2
       with:
