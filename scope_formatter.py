@@ -198,6 +198,8 @@ class App(QWidget):
         self.canvas.draw()
         self.processed_canvas.draw()
 
+        self.plot_button.setEnabled(False)
+
         self.zero_offset_button.setEnabled(True)
         self.export_button.setEnabled(True)
         self.decimation_slider.setEnabled(True)
