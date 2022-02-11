@@ -13,9 +13,11 @@ from PyQt5 import QtCore
 import qtmodern.styles
 import qtmodern.windows
 from PyQt5.QtWidgets import QApplication, QGroupBox, QHBoxLayout, QMessageBox, QPushButton, QSlider, \
-    QVBoxLayout, QWidget, QFileDialog
+    QVBoxLayout, QWidget, QFileDialog, QListWidget
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from data_loader import DataLoader
+from data_processor import DataProcessor
 
 from helpers import DraculaAccents, DraculaColors, process_raw_data_lines
 
@@ -29,10 +31,8 @@ class App(QWidget):
         self.width, self.height = 900, 600
         self.setMinimumSize(self.width, self.height)
 
-        # Class Variables
-        self.data = np.array([])
-        self.zero_offset = False
-        self.decimation = 1
+        self.data_loader = None
+        self.data_processor = DataProcessor(None)
 
         # Styling
         plt.style.use("./dracula.mplstyle")
@@ -85,9 +85,9 @@ class App(QWidget):
 
         self.zero_offset_button = QPushButton("Zero Offset")
         self.zero_offset_button.setCheckable(True)
-        self.zero_offset_button.setChecked(self.zero_offset)
+        self.zero_offset_button.setChecked(False)
         self.zero_offset_button.setEnabled(False)
-        self.zero_offset_button.clicked.connect(self.zero_offset_singal)
+        self.zero_offset_button.clicked.connect(self.zero_offset_signal)
 
         self.export_button = QPushButton("Export CSV")
         self.export_button.setEnabled(False)
@@ -99,13 +99,18 @@ class App(QWidget):
         self.zero_offset_button.setMinimumSize(100, 50)
         self.export_button.setMinimumSize(100, 50)
 
+        #-Choosers
+        self.x_chooser = QListWidget()
+        self.x_chooser.itemClicked.connect(self.update_x_values)
+    
+
         # Slider
         self.decimation_slider = QSlider()
         self.decimation_slider.setEnabled(False)
         self.decimation_slider.setOrientation(QtCore.Qt.Horizontal)
         self.decimation_slider.setMinimum(1)
         self.decimation_slider.setMaximum(10)
-        self.decimation_slider.setValue(self.decimation)
+        self.decimation_slider.setValue(1)
         self.decimation_slider.setTickPosition(QSlider.TicksBelow)
         self.decimation_slider.valueChanged.connect(self.change_decimation)
 
@@ -150,10 +155,8 @@ class App(QWidget):
         msg = QMessageBox()
 
         try:
-            lines = open(file_name).readlines()
-            self.date, self.start_time, self.data = process_raw_data_lines(lines)
-            self.processed_data = self.data
-            self.cropped_data = self.processed_data
+            self.data_loader = DataLoader(file_name)
+            self.data_processor.set_raw_data(self.data_loader.get_data())
 
             msg.setIcon(QMessageBox.Information)
             msg.setText("Successfully loaded {}.".format(os.path.basename(file_name)))
@@ -183,52 +186,41 @@ class App(QWidget):
 
 
     def plotData(self):
-        self.canvas_series = self.canvas.axes.scatter(self.data[:, 0], self.data[:, 1], color=self.canvas_series_color.value)
+        raw_data = self.data_processor.get_raw_data()
+
+        self.canvas_series = self.canvas.axes.scatter(raw_data[:, 0], raw_data[:, 1], color=self.canvas_series_color.value)
         self.canvas.axes.grid(color=DraculaColors.current_line.value)
 
-        self.processed_canvas_series = self.processed_canvas.axes.scatter(self.processed_data[:, 0], self.processed_data[:, 1], color=self.processed_canvas_series_color.value)
+        data, extents = self.data_processor.update_data()
+
+        self.processed_canvas_series = self.processed_canvas.axes.scatter(data[:, 0], data[:, 1], color=self.processed_canvas_series_color.value)
         self.processed_canvas.axes.grid(color=DraculaColors.current_line.value)
 
-        self.processed_canvas_xlim = self.processed_canvas.axes.get_xlim()
-        self.processed_canvas_ylim = self.processed_canvas.axes.get_ylim()
+        self.data_processor.set_extents(self.processed_canvas.axes.get_xlim(), self.processed_canvas.axes.get_ylim())
 
         self.add_processed_canvas_cursor()
 
         self.canvas.draw()
         self.processed_canvas.draw()
 
-        self.plot_button.setEnabled(False)
-
         self.zero_offset_button.setEnabled(True)
         self.export_button.setEnabled(True)
         self.decimation_slider.setEnabled(True)
+
+
+    def update_x_values(self, item):
+        print(item)
 
 
     def bounding_box_select(self, eclick, erelease):
         extents = self.selector.extents
 
         if extents[0] == extents[1] and extents[2] == extents[3]:
-            self.cropped_data = self.data
-
-            self.processed_canvas_xlim = self.canvas.axes.get_xlim()
-            self.processed_canvas_ylim = self.canvas.axes.get_ylim()
+            self.data_processor.set_extents(self.canvas.axes.get_xlim(), self.canvas.axes.get_ylim())
         else:
-            if self.data.any():
-                croppped = np.where(
-                    (self.data[:, 0] >= extents[0]) &
-                    (self.data[:, 0] <= extents[1]) &
-                    (self.data[:, 1] >= extents[2]) &
-                    (self.data[:, 1] <= extents[3])
-                )
+            self.data_processor.set_extents(extents[0:2], extents[2:4])
 
-                self.cropped_data = self.data[croppped]
-            else:
-                self.cropped_data = self.data
-
-            self.processed_canvas_xlim = extents[0], extents[1]
-            self.processed_canvas_ylim = extents[2], extents[3]
-
-        self.apply_modifiers_and_update_canvas()
+        self.update_canvas()
 
 
     def export_processed_data_as_csv(self):
@@ -259,33 +251,26 @@ class App(QWidget):
 
 
     def change_decimation(self, value):
-        self.decimation = value
-        self.apply_modifiers_and_update_canvas()
+        self.data_processor.set_decimation(value)
+        self.update_canvas()
 
 
-    def zero_offset_singal(self):
-        self.zero_offset = self.zero_offset_button.isChecked()
-        self.apply_modifiers_and_update_canvas()
+    def zero_offset_signal(self):
+        self.data_processor.set_zero_offset(self.zero_offset_button.isChecked())
+        self.update_canvas()
 
 
-    def apply_modifiers_and_update_canvas(self):
-        self.processed_data = self.cropped_data[::self.decimation].copy()
+    def update_canvas(self):
+        data, extents = self.data_processor.update_data()
 
-        if self.zero_offset:
-            min_value = min(self.data[:, 1])
-
-            self.processed_data[:, 1] = np.subtract(self.processed_data[:, 1], min_value)
-            self.processed_canvas.axes.set_ylim(self.processed_canvas_ylim - min_value)
-        else:
-            self.processed_canvas.axes.set_ylim(self.processed_canvas_ylim)
-
-        self.processed_canvas.axes.set_xlim(self.processed_canvas_xlim)
+        self.processed_canvas.axes.set_xlim(extents[0:2])
+        self.processed_canvas.axes.set_ylim(extents[2:4])
 
         if self.processed_canvas_series is not None:
             self.processed_canvas_series.remove()
             self.processed_canvas_cursor.remove()
 
-            self.processed_canvas_series = self.processed_canvas.axes.scatter(self.processed_data[:, 0], self.processed_data[:, 1], color=self.processed_canvas_series_color.value)
+            self.processed_canvas_series = self.processed_canvas.axes.scatter(data[:, 0], data[:, 1], color=self.processed_canvas_series_color.value)
             self.add_processed_canvas_cursor()
 
         self.processed_canvas.axes.grid(color=DraculaColors.current_line.value)

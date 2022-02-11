@@ -7,22 +7,23 @@ import numpy as np
 def process_raw_data_lines(data):
     header_length = 5
 
-    class Columns(Enum):
+    class IndexColumns(Enum):
         date = 0
         time = 1
-        voltage = 2
 
     # Lambda to convert timestamp into datetime object.
     str_to_date_time = lambda x: datetime.strptime(x, '%H:%M:%S.%f')
 
     # Get the date and start time from the first line of the file.
-    date, start_time = np.genfromtxt(data[:header_length+1], dtype=None, skip_header=header_length, encoding="utf-8", usecols=[Columns.date.value, Columns.time.value], converters={Columns.time.value: str_to_date_time}).tolist()
+    first_line = np.genfromtxt(StringIO(data[header_length]), dtype=None, encoding="utf-8", converters={IndexColumns.time.value: str_to_date_time}).tolist()
+    date, start_time = first_line[:len(IndexColumns)]
 
     # Lambda to find delta between the timestamp datetime relative to the start time in seconds.
     str_to_delta_time = lambda x: (str_to_date_time(x) - start_time).microseconds * 1e-6
 
-    # Put the data to a numpy array.
-    return date, start_time, np.genfromtxt(data, skip_header=header_length, encoding="utf-8", usecols=[Columns.time.value, Columns.voltage.value], converters={Columns.time.value: str_to_delta_time})
+    output = np.genfromtxt(data, skip_header=header_length, encoding="utf-8", usecols=[i for i in range(len(IndexColumns)-1, len(first_line)-len(IndexColumns)+2)], converters={IndexColumns.time.value: str_to_delta_time})
+
+    return output
 
 
 class DraculaColors(Enum):
