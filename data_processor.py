@@ -14,29 +14,36 @@ class DataProcessor:
         self.decimation = 1
         self.zero_offset = False
 
+
     def get_raw_data(self):
         return self.raw_data
+
 
     def set_extents(self, x_lim, y_lim):
         self.data_extents = np.concatenate((x_lim, y_lim))
 
+
     def update_x_divisor(self, x_divisor):
         self.x_divisor = x_divisor
-    
+
+
     def update_y_divisor(self, y_divisor):
         self.y_divisor = y_divisor
-    
+
+
     def set_decimation(self, decimation):
         self.decimation = decimation
     
+
     def set_zero_offset(self, zero_offset):
         self.zero_offset = zero_offset
+
 
     def set_raw_data(self, raw_data):
         self.raw_data = raw_data
         
 
-    def update_data(self):
+    def process_data(self):
         if self.raw_data.size == 0:
             return [], []
 

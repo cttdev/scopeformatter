@@ -157,6 +157,9 @@ class App(QWidget):
         try:
             self.data_loader = DataLoader(file_name)
             self.data_processor.set_raw_data(self.data_loader.get_data())
+            
+            for i in range(len(self.data_loader.get_data()[0])):
+                self.x_chooser.addItem(str(i))
 
             msg.setIcon(QMessageBox.Information)
             msg.setText("Successfully loaded {}.".format(os.path.basename(file_name)))
@@ -261,7 +264,7 @@ class App(QWidget):
 
 
     def update_canvas(self):
-        data, extents = self.data_processor.update_data()
+        data, extents = self.data_processor.process_data()
 
         self.processed_canvas.axes.set_xlim(extents[0:2])
         self.processed_canvas.axes.set_ylim(extents[2:4])

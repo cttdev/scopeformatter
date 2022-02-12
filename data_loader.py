@@ -1,6 +1,8 @@
 from datetime import datetime
 from enum import Enum
 from io import StringIO
+import math
+from sqlite3 import converters
 
 import numpy as np
 
@@ -23,24 +25,56 @@ class DataLoader:
     def get_data(self):
         return self.data
 
-    @staticmethod
-    def process_raw_data_lines(data):
+    def get_num_voltage_columns(self):
+        return self.data.shape[1] - len(self.IndexColumns)
+
+    def process_raw_data_lines(self, data):
+        dates = []
+        start_times = []
+
         header_length = 5
 
-        class IndexColumns(Enum):
-            date = 0
-            time = 1
+        labels = np.genfromtxt(StringIO(data[header_length-1]), dtype=None, encoding="utf-8").tolist()
+        num_series = sum("Y" in i for i in labels)
 
         # Lambda to convert timestamp into datetime object.
         str_to_date_time = lambda x: datetime.strptime(x, '%H:%M:%S.%f')
 
+        first_line_converters = {}
+        for i in range(num_series):
+            first_line_converters[self.Columns.time.value + i*len(self.Columns)] = str_to_date_time
+
         # Get the date and start time from the first line of the file.
-        first_line = np.genfromtxt(StringIO(data[header_length]), dtype=None, encoding="utf-8", converters={IndexColumns.time.value: str_to_date_time}).tolist()
-        date, start_time = first_line[:len(IndexColumns)]
+        first_line = np.genfromtxt(StringIO(data[header_length]), dtype=None, encoding="utf-8", converters=first_line_converters).tolist()
+        num_series = math.floor(len(first_line)/len(self.Columns))
+
+        for i in range(num_series):
+            date, start_time, voltage = first_line[i*len(self.Columns):(i+1)*len(self.Columns)]
+            dates.append(date)
+            start_times.append(start_time)
 
         # Lambda to find delta between the timestamp datetime relative to the start time in seconds.
-        str_to_delta_time = lambda x: (str_to_date_time(x) - start_time).microseconds * 1e-6
+        str_to_delta_time = lambda x: (str_to_date_time(x) - min(start_times)).microseconds * 1e-6
 
-        output = np.genfromtxt(data, skip_header=header_length, encoding="utf-8", usecols=[i for i in range(len(IndexColumns)-1, len(first_line)-len(IndexColumns)+2)], converters={IndexColumns.time.value: str_to_delta_time})
+        data_converters = {}
+        for i in range(num_series):
+            data_converters[self.Columns.time.value + i*len(self.Columns)] = str_to_delta_time
+
+        cols = []
+        for i in range(num_series):
+            cols.append(self.Columns.time.value + i*len(self.Columns))
+            cols.append(self.Columns.voltage.value + i*len(self.Columns))
+
+        output = np.genfromtxt(data, skip_header=header_length, encoding="utf-8", usecols=cols, converters=data_converters)
 
         return date, start_time, output
+    
+    class Columns(Enum):
+        date = 0
+        time = 1
+        voltage = 2
+
+
+if __name__ == "__main__":
+    data = DataLoader("test2.txt")
+    print(data.get_data())
