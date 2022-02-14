@@ -18,16 +18,15 @@ class DataProcessor:
     def get_raw_data(self):
         return self.raw_data
 
-
     def set_extents(self, x_lim, y_lim):
         self.data_extents = np.concatenate((x_lim, y_lim))
 
 
-    def update_x_divisor(self, x_divisor):
+    def set_x_divisor(self, x_divisor):
         self.x_divisor = x_divisor
 
 
-    def update_y_divisor(self, y_divisor):
+    def set_y_divisor(self, y_divisor):
         self.y_divisor = y_divisor
 
 
@@ -49,7 +48,6 @@ class DataProcessor:
 
         # Extents
         updated_extents = self.data_extents.copy()
-
         
         # Apply Crop
         if not len(self.data_extents) == 0:
@@ -65,6 +63,7 @@ class DataProcessor:
 
         # Apply Divisors
         divided_data = cropped_data / np.array([self.x_divisor, self.y_divisor])
+        updated_extents = (np.array(updated_extents) / np.array([self.x_divisor, self.x_divisor, self.y_divisor, self.y_divisor])).tolist()
 
         # Apply Decimation
         decimated_data = divided_data[::self.decimation]

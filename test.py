@@ -1,4 +1,5 @@
 from enum import Enum
+from io import StringIO
 import numpy as np
 from datetime import datetime
 
@@ -15,7 +16,7 @@ class Columns(Enum):
 str_to_date_time = lambda x: datetime.strptime(x, '%H:%M:%S.%f')
 
 # Get the date and start time from the first line of the file.
-date, start_time = np.genfromtxt(lines[:header_length+1], dtype=None, skip_header=header_length, encoding="utf-8", usecols=[Columns.date.value, Columns.time.value], converters={Columns.time.value: str_to_date_time}).tolist()
+date, start_time = np.genfromtxt(StringIO(lines[header_length]), dtype=None, encoding="utf-8", usecols=[Columns.date.value, Columns.time.value], converters={Columns.time.value: str_to_date_time}).tolist()
 
 # Lambda to find delta between the timestamp datetime realtive to the start time in seconds.
 str_to_delta_time = lambda x: (str_to_date_time(x) - start_time).microseconds * 1e-6
