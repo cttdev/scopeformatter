@@ -146,7 +146,7 @@ class App(QWidget):
         # Main Settings
         main_settings_tab = QWidget()
 
-        main_settings_tab.layout = QVBoxLayout()
+        main_settings_tab.layout = QVBoxLayout(main_settings_tab)
         main_settings_tab.layout.addWidget(file_button)
         main_settings_tab.layout.addWidget(self.x_chooser)
         main_settings_tab.layout.addWidget(self.plot_button)
@@ -168,7 +168,7 @@ class App(QWidget):
         # Series Settings
         self.series_settings_tab = QWidget()
 
-        self.series_settings_tab.layout = QVBoxLayout()
+        self.series_settings_tab.layout = QVBoxLayout(self.series_settings_tab)
 
         # X-Series
         self.series_settings_tab.layout.addWidget(self.x_chooser)
