@@ -13,13 +13,13 @@ from PyQt5 import QtCore, QtGui
 import qtmodern.styles
 import qtmodern.windows
 from PyQt5.QtWidgets import QApplication, QGroupBox, QHBoxLayout, QLineEdit, QMessageBox, QPushButton, QSlider, QTabWidget, \
-    QVBoxLayout, QWidget, QFileDialog, QListWidget
+    QVBoxLayout, QWidget, QFileDialog, QListWidget, QLabel
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from data_loader import DataLoader
 from data_processor import DataProcessor
 
-from helpers import DraculaAccents, DraculaColors
+from helpers import DraculaAccents, DraculaColors, InterpolationTypes
 
 
 class App(QWidget):
@@ -37,7 +37,8 @@ class App(QWidget):
         # Styling
         plt.style.use("./dracula.mplstyle")
         self.canvas_series_color = random.choice(list(DraculaAccents))
-        self.processed_canvas_series_color = random.choice([i for i in list(DraculaAccents) if i != self.canvas_series_color])
+        self.processed_canvas_series_color = random.choice([i for i in list(DraculaAccents) if not i in [self.canvas_series_color]])
+        self.interpolated_series_color = random.choice([i for i in list(DraculaAccents) if not i in [self.canvas_series_color, self.processed_canvas_series_color]])
 
         # Canvas and Toolbar
         self.figure = plt.figure()
@@ -75,6 +76,7 @@ class App(QWidget):
         self.processed_canvas.setFocus()
 
         self.processed_canvas_series = None
+        self.interpolated_series = None
         self.processed_canvas_cursor = None
 
         # Buttons
@@ -95,6 +97,11 @@ class App(QWidget):
         self.export_button.setEnabled(False)
         self.export_button.clicked.connect(self.export_processed_data_as_csv)
 
+        self.interpolate_button = QPushButton("Interpolate")
+        self.interpolate_button.setCheckable(True)
+        self.interpolate_button.setChecked(False)
+        self.interpolate_button.clicked.connect(self.update_processed_canvas)
+
         file_button.setMinimumSize(100, 50)
         self.plot_button.setMinimumSize(100, 50)
         self.zero_offset_button.setMinimumSize(100, 50)
@@ -107,6 +114,11 @@ class App(QWidget):
         self.y_chooser = QListWidget()
         self.y_chooser.itemClicked.connect(self.update_series_values)
 
+        self.interpolation_chooser = QListWidget()
+        self.interpolation_chooser.addItems({i.name: i.value for i in InterpolationTypes})
+        self.interpolation_chooser.setCurrentRow(0)
+        self.interpolation_chooser.itemClicked.connect(self.update_processed_canvas)
+
         # Entry
         self.x_divisor_entry = QLineEdit()
         self.x_divisor_entry.setValidator(QtGui.QDoubleValidator())
@@ -117,6 +129,9 @@ class App(QWidget):
         self.y_divisor_entry.setValidator(QtGui.QDoubleValidator())
         self.y_divisor_entry.setText("1")
         self.y_divisor_entry.textChanged.connect(self.change_y_divisor)
+
+        # Label
+        self.interpolate_equation = QLabel()
 
         # Slider
         self.decimation_slider = QSlider()
@@ -198,6 +213,27 @@ class App(QWidget):
         settings_tabs.addTab(self.series_settings_tab, "Series")
 
         self.series_settings_tab.setEnabled(False)
+
+        # Interpolation Settings
+        self.interpolation_settings_tab = QWidget()
+
+        self.interpolation_settings_tab.layout = QVBoxLayout()
+
+        self.interpolation_settings_tab.layout.addWidget(self.interpolation_chooser)
+        self.interpolation_settings_tab.layout.addWidget(self.interpolate_button)
+
+        interpolate_equation_layout = QVBoxLayout()
+        interpolate_equation_layout.addWidget(self.interpolate_equation)
+
+        interpolate_equation_group = QGroupBox("Equation")
+        interpolate_equation_group.setMaximumSize(300, 100)
+        interpolate_equation_group.setLayout(interpolate_equation_layout)
+
+        self.interpolation_settings_tab.layout.addWidget(interpolate_equation_group)
+
+        self.interpolation_settings_tab.setLayout(self.interpolation_settings_tab.layout)
+        settings_tabs.addTab(self.interpolation_settings_tab, "Interpolation")
+
 
         # Main Layout 
         main_layout.addWidget(settings_tabs)
@@ -281,7 +317,8 @@ class App(QWidget):
 
         self.processed_canvas_series = self.processed_canvas.axes.scatter(data[:, 0], data[:, 1], color=self.processed_canvas_series_color.value)
         self.processed_canvas.axes.grid(color=DraculaColors.current_line.value)
-        
+
+        self.interpolate()
         self.add_processed_canvas_cursor()
         self.processed_canvas.draw()
 
@@ -364,6 +401,30 @@ class App(QWidget):
         self.update_processed_canvas()
 
 
+    def interpolate(self):
+        if self.interpolate_button.isChecked():
+            if self.interpolated_series is not None:
+                self.processed_canvas.axes.lines.pop(0)
+
+            interpolation_dict = {i.name: i.value for i in InterpolationTypes}
+            chosen_interpolation = interpolation_dict[self.interpolation_chooser.currentItem().text()]
+
+            data, extents = self.data_processor.process_data()
+            x = data[:, 0]
+            y = data[:, 1]
+
+            model = np.poly1d(np.polyfit(x, y, chosen_interpolation))
+            fit_y = model(x)
+
+            self.interpolated_series = self.processed_canvas.axes.plot(x, fit_y, color=self.interpolated_series_color.value, linewidth=2, dash_capstyle='round')
+
+            self.interpolate_equation.setText(str(model).strip())
+        elif not len(self.processed_canvas.axes.lines) == 0:
+            self.interpolated_series = None
+            self.processed_canvas.axes.lines.pop(0)
+            self.interpolate_equation.setText("")
+
+
     def update_processed_canvas(self):
         data, extents = self.data_processor.process_data()
 
@@ -378,6 +439,8 @@ class App(QWidget):
             self.add_processed_canvas_cursor()
 
         self.processed_canvas.axes.grid(color=DraculaColors.current_line.value)
+
+        self.interpolate()
 
         self.processed_canvas.draw()
 
