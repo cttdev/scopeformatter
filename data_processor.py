@@ -80,9 +80,3 @@ class DataProcessor:
             updated_extents[2:4] = updated_extents[2:4] - min_value
 
         return decimated_data, updated_extents
-
-
-
-
-
-    
