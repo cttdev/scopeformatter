@@ -32,7 +32,7 @@ class App(QWidget):
         self.setMinimumSize(self.width, self.height)
 
         self.data_loader = None
-        self.data_processor = DataProcessor(None)
+        self.data_processor = DataProcessor(np.array([]))
 
         # Styling
         plt.style.use("./dracula.mplstyle")
@@ -234,6 +234,7 @@ class App(QWidget):
         self.interpolation_settings_tab.setLayout(self.interpolation_settings_tab.layout)
         settings_tabs.addTab(self.interpolation_settings_tab, "Interpolation")
 
+        self.interpolation_settings_tab.setEnabled(False)
 
         # Main Layout 
         main_layout.addWidget(settings_tabs)
@@ -255,6 +256,9 @@ class App(QWidget):
 
             series_names = list(self.data_loader.get_series_dict())
 
+            self.x_chooser.clear()
+            self.y_chooser.clear()
+
             # Enable choosers
             self.x_chooser.addItems(series_names)
             self.x_chooser.setCurrentRow(DataLoader.DataColums.Time.value)
@@ -270,15 +274,18 @@ class App(QWidget):
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
 
-            self.canvas.axes.clear()
-            self.processed_canvas.axes.clear()
-
             self.plot_button.setEnabled(True)
+
         except:
+            self.x_chooser.clear()
+            self.y_chooser.clear()
+
             self.plot_button.setEnabled(False)
             self.zero_offset_button.setEnabled(False)
             self.export_button.setEnabled(False)
             self.decimation_slider.setEnabled(False)
+            self.series_settings_tab.setEnabled(False)
+            self.interpolation_settings_tab.setEnabled(False)
 
             msg.setIcon(QMessageBox.Critical)
             if file_name == "":
@@ -289,6 +296,24 @@ class App(QWidget):
             msg.setWindowTitle("Error!")
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
+
+        self.canvas.axes.clear()
+        self.processed_canvas.axes.clear()
+
+        if self.canvas_series is not None:
+            self.canvas_series.remove()
+            self.canvas_series = None
+
+        if self.processed_canvas_series is not None:
+            self.processed_canvas_series.remove()
+            self.processed_canvas_cursor.remove()
+            self.processed_canvas_series = None
+
+        self.canvas.axes.grid(color=DraculaColors.current_line.value)
+        self.processed_canvas.axes.grid(color=DraculaColors.current_line.value)
+
+        self.canvas.draw()
+        self.processed_canvas.draw()
 
 
     def plotData(self):
@@ -326,6 +351,7 @@ class App(QWidget):
         self.export_button.setEnabled(True)
         self.decimation_slider.setEnabled(True)
         self.series_settings_tab.setEnabled(True)
+        self.interpolation_settings_tab.setEnabled(True)
 
 
     def update_series_values(self, item):

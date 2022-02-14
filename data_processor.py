@@ -44,7 +44,7 @@ class DataProcessor:
 
     def process_data(self):
         if self.raw_data.size == 0:
-            return [], []
+            return self.raw_data, self.data_extents
 
         # Extents
         updated_extents = self.data_extents.copy()
