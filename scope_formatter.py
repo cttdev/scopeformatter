@@ -13,7 +13,7 @@ from PyQt5 import QtCore, QtGui
 import qtmodern.styles
 import qtmodern.windows
 from PyQt5.QtWidgets import QApplication, QGroupBox, QHBoxLayout, QLineEdit, QMessageBox, QPushButton, QSlider, QTabWidget, \
-    QVBoxLayout, QWidget, QFileDialog, QListWidget, QLabel
+    QVBoxLayout, QWidget, QFileDialog, QListWidget, QLabel, QSplashScreen
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from data_loader import DataLoader
@@ -242,8 +242,6 @@ class App(QWidget):
         main_layout.addLayout(processed_plot_layout)
 
         self.setLayout(main_layout)
-
-        self.show()
 
 
     def loadFile(self):
@@ -500,6 +498,24 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     qtmodern.styles.dark(app)
 
+    splash = QSplashScreen(
+        QtGui.QPixmap("resources/logo.png").scaledToHeight(
+            400, QtCore.Qt.TransformationMode.SmoothTransformation
+        )
+    )
+    
+    splash.setWindowFlags(
+        QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.FramelessWindowHint
+    )
+
+    splash.show()
+
     main = App()
+
+    def showWindow():
+        splash.close()
+        main.show()
+
+    QtCore.QTimer.singleShot(1000, showWindow)
 
     sys.exit(app.exec_())
