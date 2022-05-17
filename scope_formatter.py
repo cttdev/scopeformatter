@@ -428,8 +428,6 @@ class App(QWidget):
 
     def interpolate(self):
         if self.interpolate_button.isChecked():
-            print(len(self.processed_canvas.axes.lines))
-
             if self.interpolated_series is not None:
                 self.processed_canvas.axes.lines.pop(0)
                 self.interpolated_series = None # Default to no series.
