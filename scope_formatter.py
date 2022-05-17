@@ -19,7 +19,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from data_loader import DataLoader
 from data_processor import DataProcessor
 
-from helpers import DraculaAccents, DraculaColors, InterpolationTypes
+from helpers import DraculaAccents, DraculaColors, InterpolationTypes, exponential_equation_generator, polynomial_equation_generator
 
 
 class App(QWidget):
@@ -132,6 +132,7 @@ class App(QWidget):
 
         # Label
         self.interpolate_equation = QLabel()
+        self.interpolate_equation.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
         # Slider
         self.decimation_slider = QSlider()
@@ -226,7 +227,7 @@ class App(QWidget):
         interpolate_equation_layout.addWidget(self.interpolate_equation)
 
         interpolate_equation_group = QGroupBox("Equation")
-        interpolate_equation_group.setMaximumSize(300, 100)
+        interpolate_equation_group.setMaximumHeight(100)
         interpolate_equation_group.setLayout(interpolate_equation_layout)
 
         self.interpolation_settings_tab.layout.addWidget(interpolate_equation_group)
@@ -427,8 +428,12 @@ class App(QWidget):
 
     def interpolate(self):
         if self.interpolate_button.isChecked():
+            print(len(self.processed_canvas.axes.lines))
+
             if self.interpolated_series is not None:
                 self.processed_canvas.axes.lines.pop(0)
+                self.interpolated_series = None # Default to no series.
+                self.interpolate_equation.setText("")
 
             interpolation_dict = {i.name: i.value for i in InterpolationTypes}
             chosen_interpolation = interpolation_dict[self.interpolation_chooser.currentItem().text()]
@@ -437,12 +442,29 @@ class App(QWidget):
             x = data[:, 0]
             y = data[:, 1]
 
-            model = np.poly1d(np.polyfit(x, y, chosen_interpolation))
-            fit_y = model(x)
+            if not len(data) == 0:
+                if chosen_interpolation == InterpolationTypes.Exponential.value:
+                    negative_points = y[y < 0]
+                    negative_rms_mean = np.sqrt(np.mean(negative_points**2)) if not len(negative_points) == 0 else 0.0
 
-            self.interpolated_series = self.processed_canvas.axes.plot(x, fit_y, color=self.interpolated_series_color.value, linewidth=2, dash_capstyle='round')
+                    shifted_y = y + negative_rms_mean
 
-            self.interpolate_equation.setText(str(model).strip())
+                    invalid_points = np.where(shifted_y <= 0)
+                    interpolateable_y = np.delete(shifted_y, invalid_points)
+                    interpolateable_x = np.delete(x, invalid_points)
+
+                    model = np.polyfit(interpolateable_x, np.log(interpolateable_y), 1, w=np.sqrt(interpolateable_y))
+                    model_equation = exponential_equation_generator(model)
+
+                    fit_y = np.exp(model[1]) * np.exp(model[0] * x)
+                else:
+                    model = np.polyfit(x, y, chosen_interpolation)
+                    model_equation = polynomial_equation_generator(model)
+
+                    fit_y = np.poly1d(model)(x)
+
+                self.interpolated_series = self.processed_canvas.axes.plot(x, fit_y, color=self.interpolated_series_color.value, linewidth=2, dash_capstyle='round')
+                self.interpolate_equation.setText(model_equation)
         elif not len(self.processed_canvas.axes.lines) == 0:
             self.interpolated_series = None
             self.processed_canvas.axes.lines.pop(0)
