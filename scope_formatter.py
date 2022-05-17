@@ -442,6 +442,8 @@ class App(QWidget):
 
             if not len(data) == 0:
                 if chosen_interpolation == InterpolationTypes.Exponential.value:
+                    # To deal with negative points we take the RMS mean of all the negative points, shift the curve up by that,
+                    # then ignore all the zero and negative points that reamin after the shift.
                     negative_points = y[y < 0]
                     negative_rms_mean = np.sqrt(np.mean(negative_points**2)) if not len(negative_points) == 0 else 0.0
 
@@ -451,6 +453,7 @@ class App(QWidget):
                     interpolateable_y = np.delete(shifted_y, invalid_points)
                     interpolateable_x = np.delete(x, invalid_points)
 
+                    # Weighted linear polyfit on the log-transformed exponential.
                     model = np.polyfit(interpolateable_x, np.log(interpolateable_y), 1, w=np.sqrt(interpolateable_y))
                     model_equation = exponential_equation_generator(model)
 
