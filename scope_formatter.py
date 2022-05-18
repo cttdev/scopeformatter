@@ -3,30 +3,34 @@ import os
 import platform
 import random
 import sys
-from matplotlib.widgets import RectangleSelector
+
 import mplcursors
+from matplotlib.widgets import RectangleSelector
 
 try:
     import pyi_splash
 except:
     pass
 
-
-import numpy as np
 import matplotlib.pyplot as plt
-
-from PyQt5 import QtCore, QtGui
-
+import numpy as np
 import qtmodern.styles
 import qtmodern.windows
-from PyQt5.QtWidgets import QApplication, QGroupBox, QHBoxLayout, QLineEdit, QMessageBox, QPushButton, QSlider, QTabWidget, \
-    QVBoxLayout, QWidget, QFileDialog, QListWidget, QLabel, QSplashScreen
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import \
+    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import \
+    NavigationToolbar2QT as NavigationToolbar
+from PyQt5 import QtCore, QtGui
+from PyQt5.QtWidgets import (QApplication, QFileDialog, QGroupBox, QHBoxLayout,
+                             QLabel, QLineEdit, QListWidget, QMessageBox,
+                             QPushButton, QSlider, QSplashScreen, QTabWidget,
+                             QVBoxLayout, QWidget)
+
 from data_loader import DataLoader
 from data_processor import DataProcessor
-
-from helpers import DraculaAccents, DraculaColors, InterpolationTypes, exponential_equation_generator, polynomial_equation_generator
+from helpers import (DraculaAccents, DraculaColors, InterpolationTypes,
+                     exponential_equation_generator,
+                     polynomial_equation_generator)
 
 
 class App(QWidget):

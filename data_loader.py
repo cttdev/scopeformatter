@@ -1,7 +1,7 @@
+import math
 from datetime import datetime
 from enum import Enum
 from io import StringIO
-import math
 from sqlite3 import converters
 
 import numpy as np

@@ -2,6 +2,7 @@ from enum import Enum
 
 import numpy as np
 
+
 class InterpolationTypes(Enum):
     Linear = 1
     Quadratic = 2
