@@ -1,8 +1,15 @@
+import ctypes
 import os
+import platform
 import random
 import sys
 from matplotlib.widgets import RectangleSelector
 import mplcursors
+
+try:
+    import pyi_splash
+except:
+    pass
 
 
 import numpy as np
@@ -521,24 +528,19 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     qtmodern.styles.dark(app)
 
-    splash = QSplashScreen(
-        QtGui.QPixmap("resources/logo.png").scaledToHeight(
-            400, QtCore.Qt.TransformationMode.SmoothTransformation
-        )
-    )
-    
-    splash.setWindowFlags(
-        QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.FramelessWindowHint
-    )
+    app.setWindowIcon(QtGui.QIcon("./resources/icon.ico"))
 
-    splash.show()
+    if platform.system() == "Windows":
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+            "scope_formatter"
+        ) # App ID for taskbar icon
 
     main = App()
+    main.show()
 
-    def showWindow():
-        splash.close()
-        main.show()
-
-    QtCore.QTimer.singleShot(1000, showWindow)
+    try:
+        pyi_splash.close()
+    except:
+        pass
 
     sys.exit(app.exec_())
