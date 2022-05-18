@@ -1,7 +1,4 @@
-
-
 import numpy as np
-
 
 class DataProcessor:
     def __init__(self, raw_data):
