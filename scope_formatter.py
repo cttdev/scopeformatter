@@ -9,6 +9,8 @@ from matplotlib.widgets import RectangleSelector
 
 try:
     import pyi_splash
+    pyi_splash.update_text('UI Loaded ...')
+    pyi_splash.close()
 except:
     pass
 
@@ -541,10 +543,5 @@ if __name__ == '__main__':
 
     main = App()
     main.show()
-
-    try:
-        pyi_splash.close()
-    except:
-        pass
 
     sys.exit(app.exec_())
